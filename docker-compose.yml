@@ -1,0 +1,33 @@
+services:
+  legacy-service:
+    image: ghcr.io/mccutchen/go-httpbin:latest
+    container_name: legacy-httpbin
+    command: ["-host=0.0.0.0", "-port=8081"]
+    expose:
+      - "8081"
+    networks:
+      - backend
+    restart: unless-stopped
+
+  jwt-proxy:
+    image: envoyproxy/envoy:v1.40-latest
+    container_name: jwt-reverse-proxy
+    ports:
+      - "80:8080"
+    volumes:
+      - ./envoy/envoy.yaml:/etc/envoy/envoy.yaml:ro
+      - ./envoy/jwks.json:/etc/envoy/jwks.json:ro
+    depends_on:
+      - legacy-service
+    networks:
+      - edge
+      - backend
+    restart: unless-stopped
+
+networks:
+  edge:
+    driver: bridge
+
+  backend:
+    driver: bridge
+    internal: true
